@@ -4,12 +4,19 @@ import { Page } from '../types';
 export function useDashboard() {
   const [pages, setPages] = useState<Page[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPageId, setCurrentPageId] = useState<string | null>(null);
 
-  // 1. LOAD PAGES (GET)
+  // 1. FETCH ALL PAGES ON LOAD
   useEffect(() => {
     fetch('/api/pages')
       .then((res) => res.json())
       .then((data) => {
+        if (!Array.isArray(data)) {
+            console.error("API Error:", data);
+            setPages([]);
+            return;
+        }
+        // Convert 'blocksJson' string back to array if needed
         const formattedPages = data.map((p: any) => ({
           ...p,
           blocks: p.blocksJson ? JSON.parse(p.blocksJson) : []
@@ -23,21 +30,14 @@ export function useDashboard() {
       });
   }, []);
 
-  // 2. CREATE / UPDATE (POST)
-  const updatePage = async (updatedPage: Page) => {
-    setPages((prev) => {
-      const exists = prev.find((p) => p.id === updatedPage.id);
-      if (exists) {
-        return prev.map((p) => (p.id === updatedPage.id ? updatedPage : p));
-      }
-      return [...prev, updatedPage];
-    });
-
+  // --- HELPERS ---
+  
+  // Save to Backend
+  const saveToBackend = async (page: Page) => {
     const payload = {
-      ...updatedPage,
-      blocksJson: JSON.stringify(updatedPage.blocks || [])
+      ...page,
+      blocksJson: JSON.stringify(page.blocks || [])
     };
-
     try {
       await fetch('/api/pages', {
         method: 'POST',
@@ -45,42 +45,97 @@ export function useDashboard() {
         body: JSON.stringify(payload),
       });
     } catch (error) {
-      console.error("Failed to save page:", error);
+      console.error("Failed to save:", error);
     }
   };
 
-  // --- THE FIX IS HERE ---
-  const addPage = async (titleOrEvent?: string | any) => {
-    // If it's a Click Event or undefined, use "Untitled", otherwise use the string provided
-    const title = typeof titleOrEvent === 'string' ? titleOrEvent : 'Untitled';
+  // --- ACTIONS (Matching DashboardLayout names) ---
 
+  const handleUpdatePage = async (updatedPage: Page) => {
+    setPages((prev) => {
+      const exists = prev.find((p) => p.id === updatedPage.id);
+      if (exists) {
+        return prev.map((p) => (p.id === updatedPage.id ? updatedPage : p));
+      }
+      return [...prev, updatedPage];
+    });
+    await saveToBackend(updatedPage);
+  };
+
+  const handleCreatePage = async (parentId: string | null = null) => {
+    // 1. Generate ID safely
+    let newId;
+    try { newId = crypto.randomUUID(); } 
+    catch (e) { newId = Date.now().toString(); }
+
+    // 2. Create Object
     const newPage: Page = {
-      id: crypto.randomUUID(),
-      title,
+      id: newId,
+      title: 'Untitled',
       icon: '📄',
       coverImage: null,
       blocks: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      parentId: null,
+      parentId: parentId || null, // Ensure null if undefined
       isFavorite: false,
       isDeleted: false,
     };
+
+    console.log("Creating page with Parent ID:", parentId);
+
+    // 3. Update State & Backend
+    await handleUpdatePage(newPage);
     
-    console.log("Adding new page:", newPage); // <--- Check your Console for this!
-    await updatePage(newPage);
+    // 4. Select it immediately
+    setCurrentPageId(newPage.id);
     return newPage.id;
   };
 
-  // 3. DELETE (DELETE)
-  const deletePage = async (pageId: string) => {
-    setPages((prev) => prev.filter((p) => p.id !== pageId));
+  const handleMoveToTrash = async (pageId: string) => {
+    // Optimistic: Mark as deleted locally
+    setPages((prev) => 
+        prev.map(p => p.id === pageId ? { ...p, isDeleted: true } : p)
+    );
+
+    // Call Backend Delete
     try {
       await fetch(`/api/pages/${pageId}`, { method: 'DELETE' });
     } catch (error) {
-      console.error("Failed to delete page:", error);
+      console.error("Delete failed:", error);
     }
   };
 
-  return { pages, isLoading, addPage, updatePage, deletePage };
+  const handleRestorePage = async (pageId: string) => {
+    const page = pages.find(p => p.id === pageId);
+    if (!page) return;
+
+    const restoredPage = { ...page, isDeleted: false };
+    await handleUpdatePage(restoredPage);
+  };
+
+  const handlePermanentDelete = async (pageId: string) => {
+    // For now, we'll just remove it from UI. 
+    // (Real hard-delete endpoint requires backend update, but this is okay for MVP)
+    setPages((prev) => prev.filter((p) => p.id !== pageId));
+  };
+
+  // --- FILTERED LISTS ---
+  // Active pages are those NOT deleted
+  const activePages = pages.filter(p => !p.isDeleted);
+  // Trash pages are those deleted
+  const trashPages = pages.filter(p => p.isDeleted);
+
+  return {
+    pages: activePages,     // Only show active pages in Sidebar
+    trashPages,             // Show deleted pages in Trash
+    currentPageId,
+    setCurrentPageId,
+    isLoading,
+    handleCreatePage,       // Matches DashboardLayout
+    handleUpdatePage,       // Matches DashboardLayout
+    handleMoveToTrash,      // Matches DashboardLayout
+    handleRestorePage,      // Matches DashboardLayout
+    handlePermanentDelete,  // Matches DashboardLayout
+  };
 }
