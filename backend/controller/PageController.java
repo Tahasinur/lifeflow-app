@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/pages"
+@RequestMapping("/api/pages")
 @CrossOrigin(origins = "http://localhost:3000") // Allow Frontend to access this
 public class PageController {
 

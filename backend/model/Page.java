@@ -1,6 +1,6 @@
 package com.lifeflow.backend.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties; // <--- 1. NEW IMPORT
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties; // <--- IMPORTS FIXED
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
@@ -12,11 +12,11 @@ import java.util.UUID;
 @Data
 @Entity
 @Table(name = "pages")
-@JsonIgnoreProperties(ignoreUnknown = true) // <--- 2. NEW ANNOTATION (Fixes the error)
+@JsonIgnoreProperties(ignoreUnknown = true) // <--- FIX 1: Prevents crash from 'blocks' field
 public class Page {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
+    // <--- FIX 2: @GeneratedValue is REMOVED so we accept Frontend IDs
     private UUID id;
 
     private String title;
