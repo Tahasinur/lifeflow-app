@@ -5,7 +5,6 @@ import com.lifeflow.backend.repository.PageRepository;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/pages")
@@ -32,7 +31,7 @@ public class PageController {
 
     // Move to Trash (Soft Delete)
     @DeleteMapping("/{id}")
-    public void deletePage(@PathVariable UUID id) {
+    public void deletePage(@PathVariable String id) {
         repository.findById(id).ifPresent(page -> {
             page.setDeleted(true);
             repository.save(page);

@@ -17,7 +17,7 @@ public class Page {
 
     @Id
     // <--- FIX 2: @GeneratedValue is REMOVED so we accept Frontend IDs
-    private UUID id;
+    private String id;
 
     private String title;
     private String icon;
