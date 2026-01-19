@@ -1,93 +1,86 @@
-import { RotateCcw, Trash2 } from 'lucide-react';
+import { Trash2, RotateCcw, FileText, AlertTriangle } from 'lucide-react';
 import { Page } from '../types';
 
 interface TrashPageProps {
   trashPages: Page[];
   onRestore: (pageId: string) => void;
-  onPermanentDelete: (pageId: string) => void;
+  onDeleteForever: (pageId: string) => void;
 }
 
-export function TrashPage({ trashPages, onRestore, onPermanentDelete }: TrashPageProps) {
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return 'Unknown';
-    return new Date(dateString).toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric',
-    });
-  };
-
-  return (
-    <div className="flex flex-col h-full bg-white dark:bg-[#191919]">
-      {/* Header */}
-      <div className="border-b border-gray-200 dark:border-[#2F2F2F] bg-white dark:bg-[#191919] px-6 py-4">
-        <h1 className="text-2xl font-semibold text-[#37352F] dark:text-[#E3E3E3]">
-          Trash
-        </h1>
-        <p className="text-sm mt-1 text-[#9B9A97]">
-          Pages in trash will be kept for 30 days before permanent deletion
+export function TrashPage({ trashPages, onRestore, onDeleteForever }: TrashPageProps) {
+  if (trashPages.length === 0) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center text-[#9B9A97] p-8">
+        <div className="w-16 h-16 bg-gray-100 dark:bg-[#2F2F2F] rounded-full flex items-center justify-center mb-4">
+          <Trash2 className="w-8 h-8" />
+        </div>
+        <h2 className="text-xl font-semibold text-[#37352F] dark:text-[#E3E3E3] mb-2">Trash is empty</h2>
+        <p className="max-w-md text-center">
+          Pages you delete will appear here. You can restore them or delete them permanently.
         </p>
       </div>
+    );
+  }
 
-      {/* Content */}
-      <div className="flex-1 overflow-auto bg-white dark:bg-[#191919]">
-        {trashPages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-[#9B9A97]">
-            <Trash2 size={48} className="mb-4 opacity-50" />
-            <p className="text-lg">No pages in trash</p>
-            <p className="text-sm mt-2">Deleted pages will appear here</p>
-          </div>
-        ) : (
-          <div className="max-w-4xl mx-auto px-6 py-8">
-            <div className="space-y-2">
-              {trashPages.map((page) => (
-                <div
-                  key={page.id}
-                  className="flex items-center justify-between p-4 bg-white dark:bg-[#202020] border border-gray-200 dark:border-[#2F2F2F] rounded-lg hover:bg-gray-50 dark:hover:bg-[#252525] transition-colors"
-                >
-                  {/* Page Info */}
-                  <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <span className="text-2xl flex-shrink-0">{page.icon}</span>
-                    <div className="min-w-0 flex-1">
-                      <h3 className="text-sm font-medium truncate text-[#37352F] dark:text-[#E3E3E3]">
-                        {page.title}
-                      </h3>
-                      <p className="text-xs mt-0.5 text-[#9B9A97]">
-                        Deleted {formatDate(page.deletedAt)}
-                      </p>
-                    </div>
-                  </div>
+  return (
+    <div className="max-w-[900px] mx-auto px-24 py-12">
+      <div className="flex items-center gap-3 mb-8 pb-4 border-b border-gray-200 dark:border-[#2F2F2F]">
+        <div className="p-2 bg-red-100 dark:bg-red-900/20 rounded-md">
+          <Trash2 className="w-6 h-6 text-red-600 dark:text-red-400" />
+        </div>
+        <div>
+          <h1 className="text-3xl font-bold text-[#37352F] dark:text-[#E3E3E3]">Trash</h1>
+          <p className="text-sm text-[#9B9A97] mt-1">
+            {trashPages.length} deleted {trashPages.length === 1 ? 'page' : 'pages'}
+          </p>
+        </div>
+      </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 ml-4">
-                    <button
-                      onClick={() => onRestore(page.id)}
-                      className="flex items-center gap-2 px-3 py-2 text-sm bg-white dark:bg-[#252525] border border-gray-300 dark:border-[#2F2F2F] rounded-lg hover:bg-gray-50 dark:hover:bg-[#2F2F2F] transition-colors text-[#37352F] dark:text-[#E3E3E3]"
-                      title="Restore page"
-                    >
-                      <RotateCcw size={16} />
-                      <span>Restore</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        if (confirm(`Permanently delete "${page.title}"? This action cannot be undone.`)) {
-                          onPermanentDelete(page.id);
-                        }
-                      }}
-                      className="flex items-center gap-2 px-3 py-2 text-sm bg-white dark:bg-[#252525] border border-red-300 dark:border-red-700 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors text-red-600 dark:text-red-400"
-                      title="Delete forever"
-                    >
-                      <Trash2 size={16} />
-                      <span>Delete Forever</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
+      <div className="grid gap-3">
+        {trashPages.map((page) => (
+          <div
+            key={page.id}
+            className="group flex items-center justify-between p-4 bg-white dark:bg-[#252525] border border-gray-200 dark:border-[#2F2F2F] rounded-lg shadow-sm hover:shadow-md transition-all"
+          >
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 flex items-center justify-center bg-gray-50 dark:bg-[#2F2F2F] rounded text-xl">
+                {page.icon || <FileText className="w-5 h-5 text-gray-400" />}
+              </div>
+              <div>
+                <h3 className="font-medium text-[#37352F] dark:text-[#E3E3E3]">
+                  {page.title || 'Untitled'}
+                </h3>
+                <p className="text-xs text-[#9B9A97]">
+                  Last edited: {new Date(page.updatedAt).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => onRestore(page.id)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded-md transition-colors"
+                title="Restore Page"
+              >
+                <RotateCcw className="w-4 h-4" />
+                Restore
+              </button>
+              
+              <button
+                onClick={() => {
+                   if(confirm("Are you sure? This cannot be undone.")) {
+                       onDeleteForever(page.id);
+                   }
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-md transition-colors"
+                title="Delete Forever"
+              >
+                <AlertTriangle className="w-4 h-4" />
+                Delete
+              </button>
             </div>
           </div>
-        )}
+        ))}
       </div>
     </div>
   );
