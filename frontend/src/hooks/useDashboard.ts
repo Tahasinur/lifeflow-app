@@ -1,22 +1,23 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Page } from '../types';
 
 export function useDashboard() {
   const [pages, setPages] = useState<Page[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPageId, setCurrentPageId] = useState<string | null>(null);
+  
+  // Ref to store the timer for auto-save
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // 1. FETCH ALL PAGES ON LOAD
+  // 1. FETCH PAGES
   useEffect(() => {
     fetch('/api/pages')
       .then((res) => res.json())
       .then((data) => {
         if (!Array.isArray(data)) {
-            console.error("API Error:", data);
             setPages([]);
             return;
         }
-        // Convert 'blocksJson' string back to array if needed
         const formattedPages = data.map((p: any) => ({
           ...p,
           blocks: p.blocksJson ? JSON.parse(p.blocksJson) : []
@@ -25,15 +26,14 @@ export function useDashboard() {
         setIsLoading(false);
       })
       .catch((err) => {
-        console.error("Failed to load pages:", err);
+        console.error("Failed to load:", err);
         setIsLoading(false);
       });
   }, []);
 
-  // --- HELPERS ---
-  
-  // Save to Backend
+  // 2. THE SAVER (Actual API Call)
   const saveToBackend = async (page: Page) => {
+    console.log("Saving to backend...", page.title); // Debug log
     const payload = {
       ...page,
       blocksJson: JSON.stringify(page.blocks || [])
@@ -45,13 +45,13 @@ export function useDashboard() {
         body: JSON.stringify(payload),
       });
     } catch (error) {
-      console.error("Failed to save:", error);
+      console.error("Save failed:", error);
     }
   };
 
-  // --- ACTIONS (Matching DashboardLayout names) ---
-
+  // 3. UPDATE PAGE (Optimistic UI + Debounced Save)
   const handleUpdatePage = async (updatedPage: Page) => {
+    // A. Update UI Immediately (Fast!)
     setPages((prev) => {
       const exists = prev.find((p) => p.id === updatedPage.id);
       if (exists) {
@@ -59,46 +59,50 @@ export function useDashboard() {
       }
       return [...prev, updatedPage];
     });
-    await saveToBackend(updatedPage);
+
+    // B. Clear any pending save timer
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+
+    // C. Set a new timer (Wait 1 second before actually saving)
+    saveTimeoutRef.current = setTimeout(() => {
+      saveToBackend(updatedPage);
+    }, 1000);
   };
 
+  // 4. CREATE PAGE
   const handleCreatePage = async (parentId: string | null = null) => {
-    // 1. Generate ID safely
     let newId;
     try { newId = crypto.randomUUID(); } 
     catch (e) { newId = Date.now().toString(); }
 
-    // 2. Create Object
     const newPage: Page = {
       id: newId,
       title: 'Untitled',
       icon: '📄',
       coverImage: null,
-      blocks: [],
+      blocks: [], // Empty blocks list
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      parentId: parentId || null, // Ensure null if undefined
+      parentId: parentId || null,
       isFavorite: false,
       isDeleted: false,
     };
 
-    console.log("Creating page with Parent ID:", parentId);
-
-    // 3. Update State & Backend
-    await handleUpdatePage(newPage);
+    // For creation, we save immediately (no debounce needed)
+    await saveToBackend(newPage);
     
-    // 4. Select it immediately
+    setPages(prev => [...prev, newPage]);
     setCurrentPageId(newPage.id);
     return newPage.id;
   };
 
+  // 5. DELETE / TRASH
   const handleMoveToTrash = async (pageId: string) => {
-    // Optimistic: Mark as deleted locally
     setPages((prev) => 
         prev.map(p => p.id === pageId ? { ...p, isDeleted: true } : p)
     );
-
-    // Call Backend Delete
     try {
       await fetch(`/api/pages/${pageId}`, { method: 'DELETE' });
     } catch (error) {
@@ -109,33 +113,32 @@ export function useDashboard() {
   const handleRestorePage = async (pageId: string) => {
     const page = pages.find(p => p.id === pageId);
     if (!page) return;
-
     const restoredPage = { ...page, isDeleted: false };
-    await handleUpdatePage(restoredPage);
+    
+    // Save immediately on restore
+    await saveToBackend(restoredPage);
+    
+    setPages(prev => prev.map(p => p.id === pageId ? restoredPage : p));
   };
 
   const handlePermanentDelete = async (pageId: string) => {
-    // For now, we'll just remove it from UI. 
-    // (Real hard-delete endpoint requires backend update, but this is okay for MVP)
     setPages((prev) => prev.filter((p) => p.id !== pageId));
+    // Note: You would usually add a backend call here for hard delete
   };
 
-  // --- FILTERED LISTS ---
-  // Active pages are those NOT deleted
   const activePages = pages.filter(p => !p.isDeleted);
-  // Trash pages are those deleted
   const trashPages = pages.filter(p => p.isDeleted);
 
   return {
-    pages: activePages,     // Only show active pages in Sidebar
-    trashPages,             // Show deleted pages in Trash
+    pages: activePages,
+    trashPages,
     currentPageId,
     setCurrentPageId,
     isLoading,
-    handleCreatePage,       // Matches DashboardLayout
-    handleUpdatePage,       // Matches DashboardLayout
-    handleMoveToTrash,      // Matches DashboardLayout
-    handleRestorePage,      // Matches DashboardLayout
-    handlePermanentDelete,  // Matches DashboardLayout
+    handleCreatePage,
+    handleUpdatePage,
+    handleMoveToTrash,
+    handleRestorePage,
+    handlePermanentDelete,
   };
 }

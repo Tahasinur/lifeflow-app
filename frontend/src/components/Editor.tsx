@@ -9,11 +9,36 @@ interface EditorProps {
   onUpdatePage: (page: Page) => void;
 }
 
+// Helper for safe ID generation
+const generateId = () => {
+  try {
+    return crypto.randomUUID();
+  } catch (e) {
+    return Date.now().toString() + Math.random().toString(36).substring(2);
+  }
+};
+
 export function Editor({ page, onUpdatePage }: EditorProps) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [isHoveringCover, setIsHoveringCover] = useState(false);
   const [isHoveringHeader, setIsHoveringHeader] = useState(false);
   const titleInputRef = useRef<HTMLInputElement>(null);
+
+  // 1. AUTO-FIX: If page has no blocks, add the first one automatically
+  useEffect(() => {
+    if (page.blocks.length === 0) {
+      const newBlock: Block = {
+        id: generateId(),
+        type: 'text',
+        content: '',
+      };
+      onUpdatePage({
+        ...page,
+        blocks: [newBlock],
+        updatedAt: new Date().toISOString(),
+      });
+    }
+  }, [page.blocks.length]); // Runs only when block count hits 0
 
   useEffect(() => {
     if (isEditingTitle && titleInputRef.current) {
@@ -53,7 +78,6 @@ export function Editor({ page, onUpdatePage }: EditorProps) {
   };
 
   const handleAddCover = () => {
-    // Random Unsplash images for covers
     const coverImages = [
       'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=1200',
       'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200',
@@ -100,7 +124,7 @@ export function Editor({ page, onUpdatePage }: EditorProps) {
     if (updatedBlocks.length === 0) {
       // Always keep at least one block
       updatedBlocks.push({
-        id: crypto.randomUUID(),
+        id: generateId(),
         type: 'text',
         content: '',
       });
@@ -115,7 +139,7 @@ export function Editor({ page, onUpdatePage }: EditorProps) {
   const handleAddBlock = (afterBlockId: string, type: Block['type'] = 'text') => {
     const blockIndex = page.blocks.findIndex((b) => b.id === afterBlockId);
     const newBlock: Block = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       type,
       content: '',
     };
@@ -135,22 +159,18 @@ export function Editor({ page, onUpdatePage }: EditorProps) {
   const handleDragEnd = (result: DropResult) => {
     const { destination, source } = result;
 
-    // Check if destination exists (user might drop outside)
     if (!destination) {
       return;
     }
 
-    // If dropped in the same position, do nothing
     if (destination.index === source.index) {
       return;
     }
 
-    // Reorder the blocks array
     const reorderedBlocks = Array.from(page.blocks);
     const [movedBlock] = reorderedBlocks.splice(source.index, 1);
     reorderedBlocks.splice(destination.index, 0, movedBlock);
 
-    // Update the page with reordered blocks
     onUpdatePage({
       ...page,
       blocks: reorderedBlocks,
@@ -172,7 +192,6 @@ export function Editor({ page, onUpdatePage }: EditorProps) {
             alt="Cover"
             className="w-full h-full object-cover"
           />
-          {/* Cover Controls */}
           <div
             className={`absolute bottom-3 right-3 flex gap-2 transition-opacity ${
               isHoveringCover ? 'opacity-100' : 'opacity-0'
@@ -196,13 +215,12 @@ export function Editor({ page, onUpdatePage }: EditorProps) {
 
       {/* Main Content */}
       <div className="max-w-[900px] mx-auto px-24 py-12">
-        {/* Header Section with Icon and Title */}
+        {/* Header Section */}
         <div
           className="mb-2 group"
           onMouseEnter={() => setIsHoveringHeader(true)}
           onMouseLeave={() => setIsHoveringHeader(false)}
         >
-          {/* Header Controls - Hidden by default, visible on hover */}
           <div
             className={`flex items-center gap-2 mb-4 transition-opacity ${
               isHoveringHeader ? 'opacity-100' : 'opacity-0'
@@ -228,7 +246,6 @@ export function Editor({ page, onUpdatePage }: EditorProps) {
             )}
           </div>
 
-          {/* Icon - Overlaps cover slightly if cover exists */}
           {page.icon && (
             <div className={page.coverImage ? '-mt-12' : ''}>
               <button
@@ -241,7 +258,6 @@ export function Editor({ page, onUpdatePage }: EditorProps) {
             </div>
           )}
 
-          {/* Title */}
           {isEditingTitle ? (
             <input
               ref={titleInputRef}
@@ -292,6 +308,13 @@ export function Editor({ page, onUpdatePage }: EditorProps) {
             )}
           </Droppable>
         </DragDropContext>
+        
+        {/* Fallback Area if DragDrop fails to render (Optional safeguard) */}
+        {page.blocks.length === 0 && (
+           <div className="mt-4 text-gray-400 italic">
+               Loading editor...
+           </div>
+        )}
       </div>
     </div>
   );
