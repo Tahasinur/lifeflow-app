@@ -1,5 +1,6 @@
 package com.lifeflow.backend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties; // <--- 1. NEW IMPORT
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
@@ -11,6 +12,7 @@ import java.util.UUID;
 @Data
 @Entity
 @Table(name = "pages")
+@JsonIgnoreProperties(ignoreUnknown = true) // <--- 2. NEW ANNOTATION (Fixes the error)
 public class Page {
 
     @Id
@@ -23,13 +25,12 @@ public class Page {
     @Column(columnDefinition = "TEXT")
     private String coverImage;
 
-    // We store the blocks (text, headings) as a big JSON string for now.
     @Column(columnDefinition = "TEXT")
     private String blocksJson;
 
-    private UUID parentId; // For nesting pages inside each other
+    private UUID parentId;
     private boolean isFavorite = false;
-    private boolean isDeleted = false; // "Soft delete" (Move to trash)
+    private boolean isDeleted = false;
 
     @CreationTimestamp
     private LocalDateTime createdAt;
