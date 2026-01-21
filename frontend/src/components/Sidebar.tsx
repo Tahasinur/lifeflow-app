@@ -4,7 +4,8 @@ import { useNavigate, useLocation } from 'react-router';
 import { Page } from '../types';
 import { UserDropdown } from './UserDropdown';
 import { SettingsModal } from './SettingsModal';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
+import { Logo } from './Logo';
 
 interface SidebarProps {
   pages: Page[];
@@ -224,12 +225,8 @@ export function Sidebar({
           onClick={() => setShowUserDropdown(!showUserDropdown)}
           className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md hover:bg-gray-100 dark:hover:bg-[#2F2F2F] transition-colors"
         >
-          {/* Avatar */}
-          <div 
-            className="w-5 h-5 rounded flex-shrink-0 flex items-center justify-center bg-[#37352F] dark:bg-[#E3E3E3] text-white dark:text-[#191919] text-xs font-medium"
-          >
-            U
-          </div>
+          {/* Logo */}
+            <Logo size={20} />
           {/* Workspace Name */}
           <span className="flex-1 text-sm font-medium truncate text-left text-[#37352F] dark:text-[#E3E3E3]">
             User's Workspace

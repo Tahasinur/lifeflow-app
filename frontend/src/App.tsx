@@ -1,5 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router';
-import { Toaster } from 'sonner@2.0.3';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'; // Fixed: Changed from 'react-router'
+import { Toaster } from 'sonner'; // Fixed: Removed '@2.0.3' version tag
 import { LoginPage } from './pages/LoginPage';
 import { SignupPage } from './pages/SignupPage';
 import { DashboardLayout } from './layouts/DashboardLayout';
