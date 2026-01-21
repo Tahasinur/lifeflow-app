@@ -8,7 +8,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/pages")
-@CrossOrigin(origins = "http://localhost:3000") // Allow Frontend to access this
+@CrossOrigin(origins = "http://localhost:3000")
 public class PageController {
 
     private final PageRepository repository;
@@ -17,22 +17,21 @@ public class PageController {
         this.repository = repository;
     }
 
-    // Get all active pages
     @GetMapping
     public List<Page> getAllPages() {
-        return repository.findByIsDeletedFalse();
+        // Use the new method name
+        return repository.findByDeletedFalse();
     }
 
-    // Create or Update a page
     @PostMapping
     public Page savePage(@RequestBody Page page) {
         return repository.save(page);
     }
 
-    // Move to Trash (Soft Delete)
     @DeleteMapping("/{id}")
     public void deletePage(@PathVariable String id) {
         repository.findById(id).ifPresent(page -> {
+            // Update the field and save
             page.setDeleted(true);
             repository.save(page);
         });

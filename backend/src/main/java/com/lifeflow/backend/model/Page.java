@@ -1,6 +1,6 @@
 package com.lifeflow.backend.model;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties; // <--- IMPORTS FIXED
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
@@ -12,11 +12,10 @@ import java.util.UUID;
 @Data
 @Entity
 @Table(name = "pages")
-@JsonIgnoreProperties(ignoreUnknown = true) // <--- FIX 1: Prevents crash from 'blocks' field
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class Page {
 
     @Id
-    // <--- FIX 2: @GeneratedValue is REMOVED so we accept Frontend IDs
     private String id;
 
     private String title;
@@ -28,9 +27,11 @@ public class Page {
     @Column(columnDefinition = "TEXT")
     private String blocksJson;
 
-    private UUID parentId;
-    private boolean isFavorite = false;
-    private boolean isDeleted = false;
+    private String parentId; // Ensure this is String to match Frontend
+    
+    // RENAMED: Removed "is" prefix to fix Lombok/Spring conflict
+    private boolean favorite = false; 
+    private boolean deleted = false; 
 
     @CreationTimestamp
     private LocalDateTime createdAt;
