@@ -181,6 +181,8 @@ export function Sidebar({
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const userJson = localStorage.getItem('lifeflow-user');
+  const user = userJson ? JSON.parse(userJson) : { name: "User" };
 
   // Filter pages based on search query
   const filteredPages = searchQuery
@@ -229,7 +231,7 @@ export function Sidebar({
             <Logo size={20} />
           {/* Workspace Name */}
           <span className="flex-1 text-sm font-medium truncate text-left text-[#37352F] dark:text-[#E3E3E3]">
-            User's Workspace
+            {user.name}'s Workspace
           </span>
           {/* Chevron */}
           <ChevronDown size={16} className="text-[#9B9A97]" />

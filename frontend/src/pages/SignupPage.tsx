@@ -7,11 +7,36 @@ export function SignupPage() {
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    localStorage.setItem('lifeflow-auth', 'true');
-    navigate('/');
-  };
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  try {
+    // 1. Send data to Backend
+    // Note: We use relative path '/api' because of the vite proxy
+    // If accessing from phone, ensure vite proxy is set or use http://YOUR_IP:8080
+    const res = await fetch('/api/auth/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password }),
+    });
+
+    if (res.ok) {
+      const user = await res.json();
+      
+      // 2. Save Real User Data
+      localStorage.setItem('lifeflow-auth', 'true');
+      localStorage.setItem('lifeflow-user', JSON.stringify(user));
+      
+      // 3. Redirect
+      navigate('/');
+    } else {
+      alert("Signup failed! Email might be taken.");
+    }
+  } catch (err) {
+    console.error(err);
+    alert("Server error. Is the backend running?");
+  }
+};
 
   const handleSocialLogin = () => {
     localStorage.setItem('lifeflow-auth', 'true');

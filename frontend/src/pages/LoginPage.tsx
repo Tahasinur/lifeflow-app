@@ -6,11 +6,31 @@ export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    localStorage.setItem('lifeflow-auth', 'true');
-    navigate('/');
-  };
+  const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (res.ok) {
+      const user = await res.json();
+      
+      // Save user session
+      localStorage.setItem('lifeflow-auth', 'true');
+      localStorage.setItem('lifeflow-user', JSON.stringify(user));
+      
+      navigate('/');
+    } else {
+      alert("Invalid email or password");
+    }
+  } catch (err) {
+    alert("Login failed");
+  }
+};
 
   const handleSocialLogin = () => {
     localStorage.setItem('lifeflow-auth', 'true');

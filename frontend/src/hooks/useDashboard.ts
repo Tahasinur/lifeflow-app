@@ -10,26 +10,21 @@ export function useDashboard() {
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // 1. FETCH PAGES
-  useEffect(() => {
-    fetch('/api/pages')
-      .then((res) => res.json())
-      .then((data) => {
-        if (!Array.isArray(data)) {
-            setPages([]);
-            return;
-        }
-        const formattedPages = data.map((p: any) => ({
-          ...p,
-          blocks: p.blocksJson ? JSON.parse(p.blocksJson) : []
-        }));
-        setPages(formattedPages);
-        setIsLoading(false);
-      })
-      .catch((err) => {
-        console.error("Failed to load:", err);
-        setIsLoading(false);
-      });
-  }, []);
+  const loadPages = async () => {
+    // 1. Get the current user from storage
+    const userJson = localStorage.getItem('lifeflow-user');
+    if (!userJson) return; // Not logged in
+    const user = JSON.parse(userJson);
+
+    try {
+        // 2. Send the User ID in the URL
+        const res = await fetch(`http://localhost:8080/api/pages?userId=${user.id}`);
+        const data = await res.json();
+        setPages(data);
+    } catch (err) {
+        console.error("Error loading pages:", err);
+    }
+};
 
   // 2. THE SAVER (Actual API Call)
   const saveToBackend = async (page: Page) => {
