@@ -45,10 +45,11 @@ export function DashboardLayout() {
     const user = JSON.parse(userJson);
 
     const newPage = {
+        id: crypto.randomUUID(), // <--- FIX: Generate ID on the client
         title: 'Untitled',
         icon: '📄',
         parentId: parentId || null,
-        userId: user.id // Tag with User ID
+        userId: user.id 
     };
 
     try {
@@ -60,6 +61,8 @@ export function DashboardLayout() {
         
         if (res.ok) {
             loadPages(); // Refresh list
+            // Optional: Navigate to new page immediately
+            navigate(`/${newPage.id}`);
         } else {
             toast.error("Failed to create page");
         }
