@@ -7,7 +7,6 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
-import java.util.UUID;
 
 @Data
 @Entity
@@ -27,11 +26,14 @@ public class Page {
     @Column(columnDefinition = "TEXT")
     private String blocksJson;
 
-    private String parentId; // Ensure this is String to match Frontend
-    
-    // RENAMED: Removed "is" prefix to fix Lombok/Spring conflict
-    private boolean favorite = false; 
-    private boolean deleted = false; 
+    private String parentId;
+
+    // --- ADD THIS MISSING FIELD ---
+    private String userId;
+    // -----------------------------
+
+    private boolean favorite = false;
+    private boolean deleted = false;
 
     @CreationTimestamp
     private LocalDateTime createdAt;

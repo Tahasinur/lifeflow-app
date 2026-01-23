@@ -8,7 +8,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/pages")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = "*")
 public class PageController {
 
     private final PageRepository repository;
@@ -18,13 +18,14 @@ public class PageController {
     }
 
     @GetMapping
-    public List<Page> getAllPages() {
-        // Use the new method name
-        return repository.findByDeletedFalse();
+    public List<Page> getAllPages(@RequestParam String userId) {
+        // Return ONLY this user's pages
+        return repository.findByUserIdAndDeletedFalse(userId);
     }
 
     @PostMapping
     public Page savePage(@RequestBody Page page) {
+        // The frontend will send the userId inside the page object
         return repository.save(page);
     }
 

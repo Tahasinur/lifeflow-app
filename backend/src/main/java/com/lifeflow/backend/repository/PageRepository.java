@@ -6,6 +6,7 @@ import java.util.List;
 
 public interface PageRepository extends JpaRepository<Page, String> {
     // Corrected method names (findByDeleted instead of findByIsDeleted)
-    List<Page> findByDeletedFalse();
+    List<Page> findByUserIdAndDeletedFalse(String userId);
+
     List<Page> findByDeletedTrue();
 }
