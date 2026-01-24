@@ -1,4 +1,0 @@
-com\lifeflow\backend\model\Page.class
-com\lifeflow\backend\repository\PageRepository.class
-com\lifeflow\backend\BackendApplication.class
-com\lifeflow\backend\controller\PageController.class
