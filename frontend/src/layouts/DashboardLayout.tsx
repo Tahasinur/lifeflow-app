@@ -1,55 +1,44 @@
 import { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useParams } from 'react-router-dom';
 import { Sidebar } from '../components/Sidebar';
-import { Topbar } from '../components/Topbar'; // <--- RESTORED IMPORT
+import { Topbar } from '../components/Topbar';
 import { Page } from '../types';
 import { toast } from 'sonner';
 
 export function DashboardLayout() {
   const navigate = useNavigate();
-  const { pageId } = useParams();
+  const { pageId } = useParams(); // 1. We grab the ID from the URL here
   const [pages, setPages] = useState<Page[]>([]);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // Helper to load pages for the CURRENT user
+  // Load Pages
   const loadPages = async () => {
     const userJson = localStorage.getItem('lifeflow-user');
-    // Fallback: If no user is found, don't crash, just stop.
-    if (!userJson) return; 
-    
+    if (!userJson) return;
     const user = JSON.parse(userJson);
-
     try {
-      // Fetch pages tagged with this User ID
       const res = await fetch(`/api/pages?userId=${user.id}`);
-      if (res.ok) {
-        const data = await res.json();
-        setPages(data);
-      }
+      if (res.ok) setPages(await res.json());
     } catch (err) {
       console.error("Failed to load pages", err);
     }
   };
 
-  // Load pages on mount
-  useEffect(() => {
-    loadPages();
-  }, []);
+  useEffect(() => { loadPages(); }, []);
 
+  // Create Page
   const handleCreatePage = async (parentId?: string | null) => {
     const userJson = localStorage.getItem('lifeflow-user');
-    if (!userJson) {
-        toast.error("You must be logged in to create pages");
-        return;
-    }
+    if (!userJson) { toast.error("Login required"); return; }
     const user = JSON.parse(userJson);
 
     const newPage = {
-        id: crypto.randomUUID(), // <--- FIX: Generate ID on the client
+        id: crypto.randomUUID(),
         title: 'Untitled',
         icon: '📄',
         parentId: parentId || null,
-        userId: user.id 
+        userId: user.id,
+        blocks: [], // 2. CRITICAL: Initialize blocks to prevent Editor crash
     };
 
     try {
@@ -58,31 +47,45 @@ export function DashboardLayout() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(newPage)
         });
-        
         if (res.ok) {
-            loadPages(); // Refresh list
-            // Optional: Navigate to new page immediately
+            await loadPages();
             navigate(`/${newPage.id}`);
-        } else {
-            toast.error("Failed to create page");
         }
-    } catch (e) {
-        console.error(e);
-        toast.error("Server error");
-    }
+    } catch (e) { toast.error("Failed to create"); }
   };
 
+  // 3. Update Page (This was MISSING, preventing the Editor from saving)
+  const handleUpdatePage = async (updatedPage: Page) => {
+    // Instant UI update
+    setPages(prev => prev.map(p => p.id === updatedPage.id ? updatedPage : p));
+
+    // Save to Backend
+    try {
+        await fetch('/api/pages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updatedPage)
+        });
+    } catch (e) { console.error("Save failed", e); }
+  };
+
+  // 4. Delete Page (Smart Redirect)
   const handleDeletePage = async (id: string) => {
      try {
-        await fetch(`/api/pages/${id}`, { method: 'DELETE' });
-        loadPages();
-        navigate('/');
-     } catch (e) {
-        console.error(e);
-     }
+        const res = await fetch(`/api/pages/${id}`, { method: 'DELETE' });
+        
+        if (res.ok) {
+            await loadPages();
+            
+            // 5. CRITICAL FIX: Only go Home if we deleted the ACTIVE page.
+            // This stops the app from crashing by navigating away unexpectedly.
+            if (pageId === id) {
+                navigate('/');
+            }
+        }
+     } catch (e) { console.error(e); }
   };
 
-  // Find current page title for Topbar
   const currentPage = pages.find(p => p.id === pageId);
 
   return (
@@ -90,22 +93,26 @@ export function DashboardLayout() {
       <Sidebar
         pages={pages}
         currentPageId={pageId || null}
-        onSelectPage={(id) => id ? navigate(`/${id}`) : navigate('/')}
+        onSelectPage={(id) => navigate(`/${id}`)}
         onCreatePage={handleCreatePage}
         onDeletePage={handleDeletePage}
       />
       
       <main className="flex-1 h-full flex flex-col overflow-hidden">
-        {/* RESTORED TOPBAR HERE */}
         <Topbar 
             pageTitle={currentPage?.title || "Lifeflow"} 
             isMobileMenuOpen={isMobileMenuOpen}
             onToggleMobileMenu={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         />
         
-        {/* Pass data to EditorPage via context */}
         <div className="flex-1 overflow-auto">
-             <Outlet context={{ pages, loadPages }} />
+             {/* 6. THE MAIN FIX: Passing 'currentPageId' and 'handleUpdatePage' */}
+             <Outlet context={{ 
+                pages, 
+                loadPages, 
+                handleUpdatePage, 
+                currentPageId: pageId || null 
+             }} />
         </div>
       </main>
     </div>
